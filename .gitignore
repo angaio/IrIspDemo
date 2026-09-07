@@ -1,0 +1,9 @@
+# build output
+build/
+.vs/
+*.user
+CMakeCache.txt
+CMakeFiles/
+# runtime-generated
+bin/snapshots/
+bin/records/

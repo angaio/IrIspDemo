@@ -1,0 +1,11 @@
+<!--
+  Copyright (c) 2026-09-05 Wuhan Wavefront Technology Co., Ltd. All rights reserved.
+  wechat:angaio/13707128443
+-->
+<RCC>
+    <qresource prefix="/brand">
+        <file alias="icon.png">wavefront_icon.png</file>
+        <file alias="logo.png">wavefront_logo.png</file>
+        <file alias="logo_light.png">wavefront_logo_light.png</file>
+    </qresource>
+</RCC>
