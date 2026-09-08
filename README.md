@@ -37,6 +37,29 @@ and §11 (more real 16-bit samples).
 
 ---
 
+## What's new
+
+Recent additions in this build:
+
+- **Frame-by-frame stepping** — step to the previous / next frame with the
+  transport buttons or the `,` / `.` keys (file sources).
+- **Pipeline is remembered** — the whole pipeline and every node's parameters
+  are saved on exit and restored automatically on the next launch.
+- **Detail-enhancement presets** — the open detail-enhancement node is split
+  into **balanced** and **legacy**, each with its own `Detail` plus
+  contrast / plateau controls.
+- **De-banding** — the tone-mapping (DDE) node has a `Deband` control that
+  removes the contour / stair-step banding strong enhancement can expose on
+  smooth gradients.
+- **Stronger random-noise denoise** — a second refinement pass for higher
+  quality and an optional **GPU (OpenCL)** fast path that falls back to CPU
+  automatically; a `Detail` control trades a little denoising back for texture
+  to avoid over-smoothing.
+
+All of the above are tuned live from each node's auto-generated parameter panel.
+
+---
+
 ## 1. What it does
 
 - Reads infrared input two ways (File menu):
@@ -218,9 +241,10 @@ domain. Opening runs on a worker thread behind a progress dialog.
 | Full Screen     | toggle full screen (also F11)                                                                        |
 | Play / Pause    | start or hold playback                                                                               |
 | Stop            | rewind to the first frame and hold                                                                   |
+| Prev / Next frame | step one frame back / forward �— buttons or `,` / `.` keys (file only)                    |
 | Slider          | scrub to any frame (smooth drag)                                                                     |
 | View            | Original · Processed · Side by side                                                                |
-| Pipeline panel  | add / remove / reorder nodes; per-node algorithm + parameters                                        |
+| Pipeline panel  | add / remove / reorder nodes; per-node algorithm + parameters; saved on exit, reloaded next launch |
 | Histogram panel | 16-bit histogram with 1% / 99% gray-value guides                                                     |
 
 ### Pipeline notes
