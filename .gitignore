@@ -6,4 +6,3 @@ CMakeCache.txt
 CMakeFiles/
 # runtime-generated
 bin/snapshots/
-bin/records/
