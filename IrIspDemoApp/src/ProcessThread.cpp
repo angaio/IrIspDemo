@@ -97,6 +97,20 @@ void ProcessThread::seek(int index)
     m_cv.wakeAll();
 }
 
+void ProcessThread::stepFrame(int delta)
+{
+    QMutexLocker lk(&m_mx);
+    if (!m_src || m_src->isLive()) return;
+    m_state = Paused;
+    const int count = m_src->frameCount();
+    int t = m_index + delta;
+    if (t < 0) t = 0;
+    if (count > 0 && t >= count) t = count - 1;
+    if (m_pipe) m_pipe->reset();
+    m_seek = t;
+    m_cv.wakeAll();
+}
+
 void ProcessThread::startMp4(const QString &path, int viewMode)
 {
     QMutexLocker lk(&m_mx);

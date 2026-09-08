@@ -32,6 +32,10 @@ inline QString name(int algoId)
         case 31: return QStringLiteral("Log tone mapping");
         case 32: return QStringLiteral("Mixed tone mapping");
         case 33: return QStringLiteral("Histogram equalization");
+        case 15: return QStringLiteral("BM3D denoise");
+        case 22: return QStringLiteral("Destripe (1D-WLS)");
+        case 34: return QStringLiteral("DDE balanced (open)");
+        case 35: return QStringLiteral("DDE legacy (open)");
         default: return QStringLiteral("Algorithm %1").arg(algoId);
     }
 }

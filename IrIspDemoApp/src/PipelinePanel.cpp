@@ -6,6 +6,14 @@
 #include "AlgoNames.h"
 #include "IrProcess.h"
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QFile>
+#include <QDir>
+#include <QFileInfo>
+#include <QString>
+
 #include <QListWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -101,6 +109,57 @@ void PipelinePanel::seedDefault()
     refreshList();
     m_list->setCurrentRow(0);
     emit modelChanged();
+}
+
+void PipelinePanel::saveModel(const QString &path) const
+{
+    QJsonArray arr;
+    for (const NodeModel &n : m_model) {
+        QJsonObject o;
+        o.insert(QStringLiteral("algoId"), n.algoId);
+        o.insert(QStringLiteral("enabled"), n.enabled);
+        QJsonObject pj;
+        for (auto it = n.params.constBegin(); it != n.params.constEnd(); ++it)
+            pj.insert(it.key(), it.value());
+        o.insert(QStringLiteral("params"), pj);
+        arr.append(o);
+    }
+    QJsonObject root;
+    root.insert(QStringLiteral("nodes"), arr);
+    QFileInfo(path).absoluteDir().mkpath(QStringLiteral("."));
+    QFile f(path);
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+}
+
+bool PipelinePanel::loadModel(const QString &path)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) return false;
+    QJsonParseError perr;
+    QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &perr);
+    if (perr.error != QJsonParseError::NoError || !doc.isObject()) return false;
+    const QJsonArray arr = doc.object().value(QStringLiteral("nodes")).toArray();
+    QVector<NodeModel> loaded;
+    for (const QJsonValue &v : arr) {
+        const QJsonObject o = v.toObject();
+        const int id = o.value(QStringLiteral("algoId")).toInt(-1);
+        bool known = false;
+        for (int i = 0; i < IrCatalog::count(); ++i) if (IrCatalog::idAt(i) == id) { known = true; break; }
+        if (!known) continue;
+        NodeModel n = makeNode(id);                 // seed all current defaults
+        n.enabled = o.value(QStringLiteral("enabled")).toBool(true);
+        const QJsonObject pj = o.value(QStringLiteral("params")).toObject();
+        for (auto it = pj.constBegin(); it != pj.constEnd(); ++it)
+            if (n.params.contains(it.key())) n.params[it.key()] = it.value().toInt();
+        loaded.append(n);
+    }
+    if (loaded.isEmpty()) return false;
+    m_model = loaded;
+    refreshList();
+    m_list->setCurrentRow(0);
+    emit modelChanged();
+    return true;
 }
 
 int PipelinePanel::currentRow() const { return m_list->currentRow(); }

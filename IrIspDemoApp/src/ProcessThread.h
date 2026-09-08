@@ -41,6 +41,7 @@ public:
     void pause();
     void stop();
     void seek(int index);
+    void stepFrame(int delta);   // paused single-step (file sources only)
     void setLoop(bool on);
 
     // Two independent recorders (each backed by its own DLL). Paths are opened

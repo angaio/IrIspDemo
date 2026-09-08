@@ -21,6 +21,7 @@ class QLabel;
 class QComboBox;
 class QAction;
 class QMenu;
+class QCloseEvent;
 
 class MainWindow : public QMainWindow
 {
@@ -55,6 +56,9 @@ private slots:
     void onReachedEnd();
     void onSourceClosed();
 
+protected:
+    void closeEvent(QCloseEvent *e) override;
+
 private:
     void buildUi();
     void buildMenus();
@@ -75,6 +79,8 @@ private:
 
     QToolButton *m_playBtn = nullptr;
     QToolButton *m_stopBtn = nullptr;
+    QToolButton *m_prevBtn = nullptr;   // previous frame (file only)
+    QToolButton *m_nextBtn = nullptr;   // next frame (file only)
     QSlider     *m_slider = nullptr;
     QLabel      *m_timeLabel = nullptr;
     QComboBox   *m_viewMode = nullptr;

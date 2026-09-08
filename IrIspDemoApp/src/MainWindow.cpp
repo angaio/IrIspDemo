@@ -9,6 +9,9 @@
 #include "HistogramWidget.h"
 #include "FrameSource.h"
 #include "IrProcess.h"
+#ifdef HAVE_HIK_SDK
+#  include "HikFrameSource.h"
+#endif
 
 #include <QApplication>
 #include <QMenuBar>
@@ -40,6 +43,11 @@
 #include <QThread>
 #include <QSharedPointer>
 #include <QSettings>
+#include <QStandardPaths>
+#include <QDir>
+#include <QStyle>
+#include <QShortcut>
+#include <QCloseEvent>
 #include <QFileInfo>
 #include <QMenu>
 
@@ -112,6 +120,13 @@ QIcon makeToolIcon(const QString &kind)
 }
 } // namespace
 
+static QString pipelineCfgPath()
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (dir.isEmpty()) dir = QDir::homePath();
+    return dir + QStringLiteral("/pipeline.json");
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(QStringLiteral("WAVEFRONT  \xC2\xB7  IR Image Processing Studio"));
@@ -131,11 +146,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     applyTheme();
     setPlaying(false);
 
-    m_pipePanel->seedDefault();     // emits onPipelineChanged
+    if (!m_pipePanel->loadModel(pipelineCfgPath()))
+        m_pipePanel->seedDefault();     // emits onPipelineChanged
     statusBar()->showMessage(QStringLiteral("Open a raw file or connect a camera (File menu) to begin."));
 }
 
 MainWindow::~MainWindow() { m_thread->shutdown(); }
+
+void MainWindow::closeEvent(QCloseEvent *e)
+{
+    if (m_pipePanel) m_pipePanel->saveModel(pipelineCfgPath());
+    QMainWindow::closeEvent(e);
+}
 
 // ---- UI ---------------------------------------------------------------------
 
@@ -200,6 +222,22 @@ void MainWindow::buildUi()
     connect(m_playBtn, &QToolButton::clicked, this, &MainWindow::onPlayPause);
     connect(m_stopBtn, &QToolButton::clicked, this, &MainWindow::onStop);
 
+    auto mkStep = [this](QStyle::StandardPixmap ic, const QString &tip) {
+        QToolButton *b = new QToolButton(this);
+        b->setObjectName(QStringLiteral("transport"));
+        b->setIconSize(QSize(22, 22));
+        b->setIcon(style()->standardIcon(ic));
+        b->setToolTip(tip);
+        b->setEnabled(false);
+        return b;
+    };
+    m_prevBtn = mkStep(QStyle::SP_MediaSkipBackward, QStringLiteral("Previous frame (,)"));
+    m_nextBtn = mkStep(QStyle::SP_MediaSkipForward,  QStringLiteral("Next frame (.)"));
+    connect(m_prevBtn, &QToolButton::clicked, this, [this]{ if (!m_live) { m_thread->stepFrame(-1); setPlaying(false); } });
+    connect(m_nextBtn, &QToolButton::clicked, this, [this]{ if (!m_live) { m_thread->stepFrame(+1); setPlaying(false); } });
+    { auto *sp = new QShortcut(QKeySequence(Qt::Key_Comma),  this); connect(sp, &QShortcut::activated, this, [this]{ if (!m_live) { m_thread->stepFrame(-1); setPlaying(false); } });
+      auto *sn = new QShortcut(QKeySequence(Qt::Key_Period), this); connect(sn, &QShortcut::activated, this, [this]{ if (!m_live) { m_thread->stepFrame(+1); setPlaying(false); } }); }
+
     m_slider = new QSlider(Qt::Horizontal, this);
     m_slider->setRange(0, 0);
     connect(m_slider, &QSlider::sliderPressed,  this, &MainWindow::onSliderPressed);
@@ -209,7 +247,9 @@ void MainWindow::buildUi()
     m_timeLabel = new QLabel(QStringLiteral("-- / --"), this);
     m_timeLabel->setObjectName(QStringLiteral("time"));
 
+    tl->addWidget(m_prevBtn);
     tl->addWidget(m_playBtn);
+    tl->addWidget(m_nextBtn);
     tl->addWidget(m_stopBtn);
     tl->addWidget(m_slider, 1);
     tl->addWidget(m_timeLabel);
@@ -413,7 +453,15 @@ void MainWindow::onConnectCamera()
 
     QThread *th = QThread::create([res] {
         QString err;
-        FrameSource *src = UvcFrameSource::open(0, &err);
+        FrameSource *src = nullptr;
+#ifdef HAVE_HIK_SDK
+        src = HikFrameSource::open(&err);
+#endif
+        if (!src) {
+            QString e2;
+            src = UvcFrameSource::open(0, &e2);
+            if (!src) err = err.isEmpty() ? e2 : (err + QStringLiteral("\n") + e2);
+        }
         res->src = src;
         res->err = err;
     });
@@ -599,6 +647,8 @@ void MainWindow::onStarted(int count, bool live)
         m_slider->setValue(0);
     }
     m_slider->setEnabled(!live && count > 1);
+    m_prevBtn->setEnabled(!live && count > 1);
+    m_nextBtn->setEnabled(!live && count > 1);
     setPlaying(live);
     m_timeLabel->setText(live ? QStringLiteral("live") : QStringLiteral("1 / %1").arg(count));
 }

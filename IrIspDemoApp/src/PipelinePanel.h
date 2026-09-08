@@ -38,6 +38,8 @@ public:
 
     const QVector<NodeModel> &model() const { return m_model; }
     void seedDefault();     // a sensible starting chain
+    void saveModel(const QString &path) const;  // persist nodes + params (JSON)
+    bool loadModel(const QString &path);        // true if a non-empty model was loaded
 
 signals:
     void modelChanged();
